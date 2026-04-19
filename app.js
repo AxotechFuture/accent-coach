@@ -71,6 +71,10 @@
     passageProblemWords: new Set(),
     micPermission: 'unknown',
     passageFinalized: false,
+    passageCurrEl: null,
+    passageHeardRaf: 0,
+    passageScrollIdx: -1,
+    canvasResizeObs: null,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -256,6 +260,10 @@
     cancelSpeech();
     cancelAnimationFrame(state.rafId);
     state.rafId = 0;
+    if (state.passageHeardRaf) {
+      cancelAnimationFrame(state.passageHeardRaf);
+      state.passageHeardRaf = 0;
+    }
     teardownAudioGraph();
     hideRecIndicators();
   }
@@ -318,6 +326,19 @@
   }
 
   /** --- Navigation --- */
+  function focusViewHeading(name) {
+    const panel = document.getElementById(`view-${name}`);
+    if (!panel) return;
+    const h = panel.querySelector('h2');
+    if (!h) return;
+    try {
+      h.setAttribute('tabindex', '-1');
+      h.focus({ preventScroll: true });
+    } catch {
+      /* ignore */
+    }
+  }
+
   function setView(name) {
     stopAllPractice();
     state.view = name;
@@ -330,6 +351,7 @@
       const on = btn.dataset.view === name;
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
     });
+    requestAnimationFrame(() => focusViewHeading(name));
     if (name === 'home') refreshHome();
     if (name === 'progress') refreshProgress();
     if (name === 'pairs') {
@@ -363,13 +385,29 @@
     const modal = $('#modal-welcome');
     const ok = $('#modal-accept');
     const done = store.get('firstRun', false);
-    if (!done && modal) {
-      modal.hidden = false;
+
+    function onModalKey(e) {
+      if (!modal || modal.hidden) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
     }
-    ok?.addEventListener('click', () => {
+
+    function closeModal() {
       store.set('firstRun', true);
       if (modal) modal.hidden = true;
-    });
+      document.removeEventListener('keydown', onModalKey);
+    }
+
+    if (!done && modal) {
+      modal.hidden = false;
+      requestAnimationFrame(() => {
+        ok?.focus();
+        document.addEventListener('keydown', onModalKey);
+      });
+    }
+    ok?.addEventListener('click', () => closeModal());
   }
 
   /** --- Mic check --- */
@@ -539,7 +577,11 @@
       store.set('pairStats', stats);
       addWeekWordCount(1);
       bumpPracticeDay();
-      if (fb) fb.textContent = ok ? '✅ Nice match.' : `❌ Heard “${heard || '…'}”.`;
+      if (fb) {
+        fb.textContent = ok
+          ? 'Match — nice work.'
+          : `Heard “${heard || '…'}”. Try again, or use Hear again / Slow.`;
+      }
       const miss = $('#pair-miss-tools');
       if (miss) miss.hidden = ok;
       const tipEl = $('#pair-tip');
@@ -635,15 +677,33 @@
     if (state.recognitionSupported) $('#passage-start')?.removeAttribute('disabled');
     else $('#passage-start')?.setAttribute('disabled', 'true');
     state.passageFinalized = false;
+    state.passageCurrEl = null;
+    state.passageScrollIdx = -1;
   }
 
-  function paintPassageWord(i, cls) {
-    state.passageWordEls.forEach((el, idx) => {
-      el.classList.remove('w-curr', 'w-ok', 'w-bad', 'w-skip');
-      if (idx === i) el.classList.add(cls);
-      if (idx < i) el.classList.add('w-ok');
-      if (state.passageProblemWords.has(idx)) el.classList.add('w-bad');
-    });
+  function setPassageCurrentIndex(i) {
+    const els = state.passageWordEls;
+    if (i >= 0 && i < els.length && state.passageCurrEl === els[i]) return;
+    if (state.passageCurrEl) {
+      state.passageCurrEl.classList.remove('w-curr');
+      state.passageCurrEl = null;
+    }
+    if (i < 0 || i >= els.length) {
+      state.passageScrollIdx = -1;
+      return;
+    }
+    const el = els[i];
+    el.classList.add('w-curr');
+    state.passageCurrEl = el;
+    if (i !== state.passageScrollIdx) {
+      state.passageScrollIdx = i;
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      try {
+        el.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   function startPassageRead() {
@@ -661,7 +721,8 @@
     $('#passage-rec-indicator') && ($('#passage-rec-indicator').hidden = false);
     $('#passage-stop')?.removeAttribute('disabled');
     $('#passage-start')?.setAttribute('disabled', 'true');
-    paintPassageWord(0, 'w-curr');
+    state.passageScrollIdx = -1;
+    setPassageCurrentIndex(0);
     const rec = buildRecognition();
     rec.continuous = true;
     rec.interimResults = true;
@@ -676,7 +737,14 @@
       }
       const slice = `${buffer} ${interim}`.trim();
       const heard = slice.split(/\s+/).map(normalizeWord).filter(Boolean);
-      advancePassageFromHeard(heard, !!interim);
+      const hasInterim = !!interim;
+      state._passagePendingHeard = heard;
+      state._passagePendingInterim = hasInterim;
+      if (state.passageHeardRaf) return;
+      state.passageHeardRaf = requestAnimationFrame(() => {
+        state.passageHeardRaf = 0;
+        advancePassageFromHeard(state._passagePendingHeard || [], !!state._passagePendingInterim);
+      });
     };
     rec.onerror = (e) => {
       showToast(`Passage listening error: ${e.error || 'unknown'}`);
@@ -715,8 +783,9 @@
       state.passageIndex = i;
     }
     if (state.passageIndex < state.passageTokens.length) {
-      paintPassageWord(state.passageIndex, 'w-curr');
+      setPassageCurrentIndex(state.passageIndex);
     } else if (!hasInterim) {
+      setPassageCurrentIndex(-1);
       stopPassageListening();
       finalizePassage();
     }
@@ -815,6 +884,8 @@
   function stopPassageRead(clearUi = true) {
     stopPassageListening();
     if (clearUi) {
+      state.passageCurrEl = null;
+      state.passageScrollIdx = -1;
       state.passageWordEls.forEach((el) => el.classList.remove('w-curr', 'w-ok', 'w-bad'));
     } else {
       finalizePassage();
@@ -943,13 +1014,30 @@
     }
   }
 
+  /** Prepare canvas backing store for devicePixelRatio; context draws in CSS pixels. */
+  function prepareCanvas2d(canvas) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(1, rect.width);
+    const cssH = Math.max(1, rect.height);
+    const w = Math.max(1, Math.floor(cssW * dpr));
+    const h = Math.max(1, Math.floor(cssH * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx2 = canvas.getContext('2d');
+    if (!ctx2) return null;
+    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx: ctx2, cssW, cssH };
+  }
+
   function drawBufferOnCanvas(sel, channel) {
     const c = document.querySelector(sel);
     if (!c) return;
-    const w = c.width;
-    const h = c.height;
-    const ctx2 = c.getContext('2d');
-    if (!ctx2) return;
+    const pre = prepareCanvas2d(c);
+    if (!pre) return;
+    const { ctx: ctx2, cssW: w, cssH: h } = pre;
     ctx2.clearRect(0, 0, w, h);
     ctx2.fillStyle = '#0b1220';
     ctx2.fillRect(0, 0, w, h);
@@ -970,28 +1058,33 @@
   function drawFlat(sel) {
     const c = document.querySelector(sel);
     if (!c) return;
-    const ctx2 = c.getContext('2d');
-    if (!ctx2) return;
-    ctx2.clearRect(0, 0, c.width, c.height);
+    const pre = prepareCanvas2d(c);
+    if (!pre) return;
+    const { ctx: ctx2, cssW, cssH } = pre;
+    ctx2.clearRect(0, 0, cssW, cssH);
     ctx2.fillStyle = '#0b1220';
-    ctx2.fillRect(0, 0, c.width, c.height);
+    ctx2.fillRect(0, 0, cssW, cssH);
     ctx2.strokeStyle = '#334155';
     ctx2.beginPath();
-    ctx2.moveTo(0, c.height / 2);
-    ctx2.lineTo(c.width, c.height / 2);
+    ctx2.moveTo(0, cssH / 2);
+    ctx2.lineTo(cssW, cssH / 2);
     ctx2.stroke();
   }
 
   function animateNativeGuide(seconds) {
     const c = document.querySelector('#wave-native');
     if (!c) return;
-    const ctx2 = c.getContext('2d');
-    if (!ctx2) return;
-    const w = c.width;
-    const h = c.height;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      drawFlat('#wave-native');
+      return;
+    }
     const t0 = performance.now();
     const dur = Math.max(1.2, seconds) * 1000;
     const frame = (t) => {
+      const pre = prepareCanvas2d(c);
+      if (!pre) return;
+      const { ctx: ctx2, cssW: w, cssH: h } = pre;
       const p = Math.min(1, (t - t0) / dur);
       ctx2.clearRect(0, 0, w, h);
       ctx2.fillStyle = '#0b1220';
@@ -1024,20 +1117,22 @@
       state.userAnalyser = an;
       state.userSourceNode = src;
       const c = document.querySelector('#wave-user');
-      const ctx2 = c?.getContext('2d');
-      if (!c || !ctx2) return;
+      if (!c) return;
       const data = new Uint8Array(an.frequencyBinCount);
       const loop = () => {
+        const pre = prepareCanvas2d(c);
+        if (!pre) return;
+        const { ctx: ctx2, cssW: cw, cssH: ch } = pre;
         an.getByteTimeDomainData(data);
-        ctx2.clearRect(0, 0, c.width, c.height);
+        ctx2.clearRect(0, 0, cw, ch);
         ctx2.fillStyle = '#0b1220';
-        ctx2.fillRect(0, 0, c.width, c.height);
+        ctx2.fillRect(0, 0, cw, ch);
         ctx2.strokeStyle = '#5eead4';
         ctx2.beginPath();
         for (let i = 0; i < data.length; i++) {
           const v = (data[i] - 128) / 128;
-          const x = (i / data.length) * c.width;
-          const y = c.height / 2 + v * (c.height / 2 - 4);
+          const x = (i / data.length) * cw;
+          const y = ch / 2 + v * (ch / 2 - 4);
           if (i === 0) ctx2.moveTo(x, y);
           else ctx2.lineTo(x, y);
         }
@@ -1157,7 +1252,9 @@
       let text = '';
       for (let i = 0; i < ev.results.length; i++) text += ev.results[i][0].transcript;
       const ok = roughLineMatch(expected, text);
-      $('#shadow-feedback').textContent = ok ? '✅ Line detected — nice.' : 'Keep going — try the line once more, then tap Next.';
+      $('#shadow-feedback').textContent = ok
+        ? 'Line detected — nice.'
+        : 'Keep going — try the line once more, then tap Next.';
     };
     rec.onerror = () => {
       $('#shadow-feedback').textContent = 'Listening hiccup — tap Hear line again.';
@@ -1359,8 +1456,13 @@
   function drawAccuracyChart() {
     const c = document.querySelector('#chart-accuracy');
     if (!c) return;
-    const ctx2 = c.getContext('2d');
-    if (!ctx2) return;
+    const pre = prepareCanvas2d(c);
+    if (!pre) return;
+    const { ctx: ctx2, cssW: w, cssH: h } = pre;
+    const root = getComputedStyle(document.documentElement);
+    const surface = (root.getPropertyValue('--chart-surface') || '#ffffff').trim();
+    const text = (root.getPropertyValue('--chart-text') || '#1f2933').trim();
+    const bar = (root.getPropertyValue('--chart-bar') || '#2d6a6a').trim();
     const modeAcc = store.get('modeAccuracy', {});
     const pairsArr = store.get('pairStats', {});
     let pairAvg = 0;
@@ -1376,19 +1478,17 @@
       { label: 'Compare stars', value: Math.round(average(modeAcc.compare || [])) },
       { label: 'Conversation', value: Math.round(average(modeAcc.convo || [])) },
     ];
-    const w = c.width;
-    const h = c.height;
     ctx2.clearRect(0, 0, w, h);
-    ctx2.fillStyle = '#ffffff';
+    ctx2.fillStyle = surface;
     ctx2.fillRect(0, 0, w, h);
     const barW = (w - 80) / data.length;
     data.forEach((d, i) => {
       const x = 40 + i * barW + 8;
       const bh = (h - 60) * (Math.min(100, d.value) / 100);
       const y = h - 40 - bh;
-      ctx2.fillStyle = '#2d6a6a';
+      ctx2.fillStyle = bar;
       ctx2.fillRect(x, y, barW - 16, bh);
-      ctx2.fillStyle = '#1f2933';
+      ctx2.fillStyle = text;
       ctx2.font = '12px system-ui';
       ctx2.fillText(`${d.value}%`, x, y - 6);
       ctx2.save();
@@ -1396,6 +1496,25 @@
       ctx2.rotate(-0.2);
       ctx2.fillText(d.label, 0, 0);
       ctx2.restore();
+    });
+  }
+
+  function bindCanvasResizeRedraw() {
+    if (state.canvasResizeObs || typeof ResizeObserver === 'undefined') return;
+    let t = 0;
+    const run = () => {
+      if (state.view === 'progress') drawAccuracyChart();
+      drawFlat('#wave-native');
+      if (state.compareBlob) drawUserWaveformFromBlob(state.compareBlob);
+      else drawFlat('#wave-user');
+    };
+    state.canvasResizeObs = new ResizeObserver(() => {
+      clearTimeout(t);
+      t = setTimeout(run, 80);
+    });
+    ['#chart-accuracy', '#wave-native', '#wave-user'].forEach((sel) => {
+      const el = document.querySelector(sel);
+      if (el) state.canvasResizeObs.observe(el);
     });
   }
 
@@ -1485,6 +1604,7 @@
     $('#btn-reset')?.addEventListener('click', () => resetAll());
     document.addEventListener('keydown', onKey);
     initPairCategorySelect();
+    bindCanvasResizeRedraw();
     refreshHome();
     setView('home');
   });

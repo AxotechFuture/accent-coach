@@ -1,0 +1,7 @@
+{
+  "name": "accent-coach",
+  "private": true,
+  "scripts": {
+    "test": "node --check app.js && node --check content.js && node tests/smoke-node.mjs"
+  }
+}

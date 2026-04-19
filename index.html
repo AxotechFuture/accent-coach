@@ -18,14 +18,16 @@
         <p class="tagline">Calm practice for a clearer American English sound.</p>
       </div>
     </div>
-    <nav class="tabs" aria-label="Primary navigation" role="tablist">
-      <button type="button" class="tab" role="tab" aria-selected="true" aria-controls="view-home" id="tab-home" data-view="home">Home</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-pairs" id="tab-pairs" data-view="pairs">Minimal pairs</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-passage" id="tab-passage" data-view="passage">Read aloud</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-compare" id="tab-compare" data-view="compare">Record &amp; compare</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-convo" id="tab-convo" data-view="convo">Shadow &amp; prompts</button>
-      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-progress" id="tab-progress" data-view="progress">Progress</button>
-    </nav>
+    <div class="tabs-scroll">
+      <nav class="tabs" aria-label="Primary navigation" role="tablist">
+        <button type="button" class="tab" role="tab" aria-selected="true" aria-controls="view-home" id="tab-home" data-view="home">Home</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-pairs" id="tab-pairs" data-view="pairs">Minimal pairs</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-passage" id="tab-passage" data-view="passage">Read aloud</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-compare" id="tab-compare" data-view="compare">Record &amp; compare</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-convo" id="tab-convo" data-view="convo">Shadow &amp; prompts</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-progress" id="tab-progress" data-view="progress">Progress</button>
+      </nav>
+    </div>
   </header>
 
   <p id="speech-fallback" class="banner-soft" role="note" hidden>
@@ -115,11 +117,13 @@
           <select id="passage-select" aria-label="Choose passage"></select>
         </label>
         <div class="passage card" id="passage-text" aria-label="Passage text"></div>
-        <div class="btn-row">
-          <button type="button" class="btn btn-primary" id="passage-start">Start reading</button>
-          <button type="button" class="btn btn-danger" id="passage-stop" disabled>Stop</button>
+        <div class="passage-toolbar">
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="passage-start">Start reading</button>
+            <button type="button" class="btn btn-danger" id="passage-stop" disabled>Stop</button>
+          </div>
+          <p class="rec-indicator" id="passage-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Listening…</span></p>
         </div>
-        <p class="rec-indicator" id="passage-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Listening…</span></p>
         <div class="summary card" id="passage-summary" hidden></div>
       </div>
     </section>
@@ -141,11 +145,11 @@
         <div class="wave-row">
           <div>
             <h3 class="wave-title">Native guide</h3>
-            <canvas id="wave-native" width="360" height="120" aria-label="Native audio visual guide"></canvas>
+            <canvas id="wave-native" class="viz-canvas" width="360" height="120" aria-label="Native audio visual guide"></canvas>
           </div>
           <div>
             <h3 class="wave-title">Your recording</h3>
-            <canvas id="wave-user" width="360" height="120" aria-label="Your recording waveform"></canvas>
+            <canvas id="wave-user" class="viz-canvas" width="360" height="120" aria-label="Your recording waveform"></canvas>
           </div>
         </div>
         <div class="rate-row card">
@@ -217,7 +221,7 @@
           </div>
         </div>
         <h3>Accuracy by mode</h3>
-        <canvas id="chart-accuracy" width="720" height="220" aria-label="Bar chart of accuracy by mode"></canvas>
+        <canvas id="chart-accuracy" class="chart-canvas" width="720" height="220" aria-label="Bar chart of accuracy by mode"></canvas>
         <h3>Weakest minimal-pair categories</h3>
         <ul id="weak-cats" class="list"></ul>
         <h3>Recent passage sessions</h3>
