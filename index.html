@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="AccentCoach — gentle American English clarity practice using your browser." />
+  <title>AccentCoach</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main-panel">Skip to main content</a>
+
+  <header class="app-header" role="banner">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">◆</span>
+      <div>
+        <h1 class="title">AccentCoach</h1>
+        <p class="tagline">Calm practice for a clearer American English sound.</p>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Primary navigation" role="tablist">
+      <button type="button" class="tab" role="tab" aria-selected="true" aria-controls="view-home" id="tab-home" data-view="home">Home</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-pairs" id="tab-pairs" data-view="pairs">Minimal pairs</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-passage" id="tab-passage" data-view="passage">Read aloud</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-compare" id="tab-compare" data-view="compare">Record &amp; compare</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-convo" id="tab-convo" data-view="convo">Shadow &amp; prompts</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-progress" id="tab-progress" data-view="progress">Progress</button>
+    </nav>
+  </header>
+
+  <p id="speech-fallback" class="banner-soft" role="note" hidden>
+    Live speech-to-text is not available in this browser. You can still use recording, playback, and reading modes. For full features, open this site in Chrome or Edge.
+  </p>
+
+  <main id="main-panel" class="main" tabindex="-1">
+    <!-- Home -->
+    <section id="view-home" class="view view--active" role="tabpanel" aria-labelledby="tab-home">
+      <div class="panel hero">
+        <h2>Welcome</h2>
+        <p class="lede">Pick a mode, warm up your voice, and move at your own pace. Chrome or Edge works best for listening feedback.</p>
+        <div class="stats-row" aria-live="polite">
+          <div class="stat-card">
+            <span class="stat-label">Today’s streak</span>
+            <span class="stat-value" id="home-streak">0</span>
+            <span class="stat-hint">days in a row with practice</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Words this week</span>
+            <span class="stat-value" id="home-week-words">0</span>
+            <span class="stat-hint">minimal-pair checks counted</span>
+          </div>
+        </div>
+        <div class="warmup card" id="daily-warmup"></div>
+        <div class="actions-row">
+          <button type="button" class="btn btn-primary" id="btn-mic-check">Microphone check</button>
+          <span class="mic-status" id="mic-status" role="status"></span>
+        </div>
+      </div>
+      <div class="mode-grid" role="navigation" aria-label="Practice modes">
+        <a href="#" class="mode-card" data-jump="pairs">
+          <h3>Minimal pairs</h3>
+          <p>Hear a native model, then say the highlighted word.</p>
+        </a>
+        <a href="#" class="mode-card" data-jump="passage">
+          <h3>Read aloud</h3>
+          <p>Passages with gentle live highlighting.</p>
+        </a>
+        <a href="#" class="mode-card" data-jump="compare">
+          <h3>Record &amp; compare</h3>
+          <p>Listen, record, and compare wave shapes.</p>
+        </a>
+        <a href="#" class="mode-card" data-jump="convo">
+          <h3>Shadow &amp; prompts</h3>
+          <p>Dialogue shadowing or open prompts.</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- Minimal pairs -->
+    <section id="view-pairs" class="view" hidden role="tabpanel" aria-labelledby="tab-pairs">
+      <div class="panel">
+        <h2>Minimal pairs</h2>
+        <p class="lede">Tap a word to hear it. Then press <strong>Speak</strong> and say the <span class="hl">highlighted</span> word.</p>
+        <label class="field">
+          <span>Category</span>
+          <select id="pairs-category" aria-label="Minimal pair category"></select>
+        </label>
+        <div class="pair-stage card" aria-live="polite">
+          <div class="pair-words">
+            <button type="button" class="word-btn" id="pair-left" aria-label="Play left word"></button>
+            <button type="button" class="word-btn" id="pair-right" aria-label="Play right word"></button>
+          </div>
+          <p class="target-line" id="pair-target-line"></p>
+          <div class="feedback" id="pair-feedback" aria-live="assertive"></div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="pair-speak">Speak highlighted word</button>
+            <button type="button" class="btn" id="pair-next">Next pair</button>
+          </div>
+          <div class="btn-row miss-tools" id="pair-miss-tools" hidden>
+            <button type="button" class="btn" id="pair-hear-again">Hear again</button>
+            <button type="button" class="btn" id="pair-slow">Slow it down</button>
+          </div>
+          <p class="tip" id="pair-tip"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Passage -->
+    <section id="view-passage" class="view" hidden role="tabpanel" aria-labelledby="tab-passage">
+      <div class="panel">
+        <h2>Read aloud</h2>
+        <p class="lede">Choose a passage, then start reading. Matched words turn green; tricky spots turn red.</p>
+        <label class="field">
+          <span>Passage</span>
+          <select id="passage-select" aria-label="Choose passage"></select>
+        </label>
+        <div class="passage card" id="passage-text" aria-label="Passage text"></div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="passage-start">Start reading</button>
+          <button type="button" class="btn btn-danger" id="passage-stop" disabled>Stop</button>
+        </div>
+        <p class="rec-indicator" id="passage-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Listening…</span></p>
+        <div class="summary card" id="passage-summary" hidden></div>
+      </div>
+    </section>
+
+    <!-- Compare -->
+    <section id="view-compare" class="view" hidden role="tabpanel" aria-labelledby="tab-compare">
+      <div class="panel">
+        <h2>Record &amp; compare</h2>
+        <p class="lede">Listen to the model, record yourself, then compare playback. <em>Note:</em> the left waveform is a gentle visual guide during the system voice (browser limitation); your recording shows a true waveform.</p>
+        <div class="sentence card" id="compare-sentence"></div>
+        <div class="btn-row wrap">
+          <button type="button" class="btn" id="compare-native">Hear native</button>
+          <button type="button" class="btn btn-primary" id="compare-record">Record me</button>
+          <button type="button" class="btn btn-danger" id="compare-stop" disabled>Stop</button>
+          <button type="button" class="btn" id="compare-play-user" disabled>Play my clip</button>
+          <button type="button" class="btn" id="compare-next">Next sentence</button>
+        </div>
+        <p class="rec-indicator" id="compare-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Recording…</span></p>
+        <div class="wave-row">
+          <div>
+            <h3 class="wave-title">Native guide</h3>
+            <canvas id="wave-native" width="360" height="120" aria-label="Native audio visual guide"></canvas>
+          </div>
+          <div>
+            <h3 class="wave-title">Your recording</h3>
+            <canvas id="wave-user" width="360" height="120" aria-label="Your recording waveform"></canvas>
+          </div>
+        </div>
+        <div class="rate-row card">
+          <span>Self-rating (rhythm &amp; stress)</span>
+          <div id="star-rating" class="stars" role="radiogroup" aria-label="Star rating one to five">
+            <button type="button" class="star" data-value="1" aria-label="1 star">★</button>
+            <button type="button" class="star" data-value="2" aria-label="2 stars">★</button>
+            <button type="button" class="star" data-value="3" aria-label="3 stars">★</button>
+            <button type="button" class="star" data-value="4" aria-label="4 stars">★</button>
+            <button type="button" class="star" data-value="5" aria-label="5 stars">★</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Convo -->
+    <section id="view-convo" class="view" hidden role="tabpanel" aria-labelledby="tab-convo">
+      <div class="panel">
+        <h2>Shadowing &amp; prompts</h2>
+        <div class="subtabs" role="tablist" aria-label="Conversation submodes">
+          <button type="button" class="subtab" role="tab" aria-selected="true" id="subtab-shadow" data-sub="shadow">Shadowing</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-prompt" data-sub="prompt">Open prompt</button>
+        </div>
+        <div id="convo-shadow" class="convo-sub">
+          <p class="lede">Listen to each line, repeat it, then continue. Space starts or stops listening during your turn.</p>
+          <p class="meta" id="shadow-meta"></p>
+          <div class="dialogue card" id="shadow-dialogue"></div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="shadow-begin">Begin dialogue</button>
+            <button type="button" class="btn" id="shadow-repeat-line" disabled>Hear line again</button>
+            <button type="button" class="btn" id="shadow-next-line" disabled>Next line</button>
+          </div>
+          <p class="rec-indicator" id="shadow-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Your turn — speak now</span></p>
+          <p class="tip" id="shadow-feedback" aria-live="polite"></p>
+        </div>
+        <div id="convo-prompt" class="convo-sub" hidden>
+          <p class="lede">Speak freely for up to a minute. We will capture a live transcript while you talk.</p>
+          <div class="prompt card" id="prompt-text"></div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="prompt-record">Record answer</button>
+            <button type="button" class="btn btn-danger" id="prompt-stop" disabled>Stop</button>
+          </div>
+          <p class="rec-indicator" id="prompt-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Recording…</span></p>
+          <div class="card" id="prompt-transcript" aria-live="polite"></div>
+          <audio id="prompt-audio" controls class="audio-inline" hidden></audio>
+          <div class="sliders card">
+            <label>Clarity <input type="range" id="slider-clarity" min="1" max="5" value="3" aria-valuetext="3 of 5" /></label>
+            <label>Rhythm <input type="range" id="slider-rhythm" min="1" max="5" value="3" /></label>
+            <label>Confidence <input type="range" id="slider-confidence" min="1" max="5" value="3" /></label>
+            <button type="button" class="btn" id="prompt-save-self">Save self-check</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Progress -->
+    <section id="view-progress" class="view" hidden role="tabpanel" aria-labelledby="tab-progress">
+      <div class="panel">
+        <h2>Progress</h2>
+        <p class="lede">Your data stays on this device in local storage.</p>
+        <div class="stats-row">
+          <div class="stat-card">
+            <span class="stat-label">Streak</span>
+            <span class="stat-value" id="prog-streak">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Sessions logged</span>
+            <span class="stat-value" id="prog-sessions">0</span>
+          </div>
+        </div>
+        <h3>Accuracy by mode</h3>
+        <canvas id="chart-accuracy" width="720" height="220" aria-label="Bar chart of accuracy by mode"></canvas>
+        <h3>Weakest minimal-pair categories</h3>
+        <ul id="weak-cats" class="list"></ul>
+        <h3>Recent passage sessions</h3>
+        <ul id="passage-history" class="list"></ul>
+        <div class="danger-zone card">
+          <h3>Reset</h3>
+          <p>This removes streaks, history, and ratings from this browser.</p>
+          <button type="button" class="btn btn-danger" id="btn-reset">Reset all data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <p>AccentCoach runs entirely in your browser. Speech features need a secure context (<kbd>https://</kbd> or <kbd>localhost</kbd>); GitHub Pages is ideal.</p>
+  </footer>
+
+  <!-- First-run modal -->
+  <div id="modal-welcome" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-welcome-title" hidden>
+    <div class="modal-card">
+      <h2 id="modal-welcome-title">Before you begin</h2>
+      <p>AccentCoach uses your microphone for practice. Your recordings never leave your device unless you download them elsewhere yourself.</p>
+      <p><strong>Recommended browsers:</strong> Chrome or Edge on desktop or Android for the best speech recognition. Firefox and Safari may hide recognition; you can still record and listen back.</p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="modal-accept">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="content.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
