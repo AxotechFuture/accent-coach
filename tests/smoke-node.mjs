@@ -41,12 +41,20 @@ try {
   const html = await res.text();
 
   const checks = [
-    ['title', html.includes('<title>AccentCoach</title>')],
+    ['title', html.includes('AccentCoach')],
     ['main landmark', html.includes('id="main-panel"')],
     ['app script', html.includes('src="app.js"')],
     ['content script', html.includes('src="content.js"')],
     ['stylesheet', html.includes('href="styles.css"')],
     ['tabs scroll', html.includes('class="tabs-scroll"')],
+    ['fluency tab', html.includes('id="tab-fluency"')],
+    ['accent tab', html.includes('id="tab-accent"')],
+    ['fluency view', html.includes('id="view-fluency"')],
+    ['accent view', html.includes('id="view-accent"')],
+    ['breath circle', html.includes('id="breath-circle"')],
+    ['pacing passage', html.includes('id="pace-passage"')],
+    ['daily plan', html.includes('id="daily-plan"')],
+    ['filler card', html.includes('id="prompt-fillers"')],
   ];
 
   for (const [name, ok] of checks) {
@@ -58,8 +66,20 @@ try {
   if (!appJs.includes('setPassageCurrentIndex')) {
     throw new Error('app.js: expected passage highlight helper');
   }
+  if (!appJs.includes('initFluencyView') || !appJs.includes('initAccentView')) {
+    throw new Error('app.js: expected fluency/accent views');
+  }
+  if (!appJs.includes('countFillers') || !appJs.includes('renderFillerReport')) {
+    throw new Error('app.js: expected filler-word counter');
+  }
   if (!contentJs.includes('minimalPairCategories')) {
     throw new Error('content.js: expected minimal pairs');
+  }
+  for (const k of ['dailyPlan', 'pacingPassages', 'easyOnsetWords', 'stressSentences', 'schwaPhrases', 'linkingPhrases', 'flapTWords', 'fillerWords', 'eloquencePhrases']) {
+    if (!contentJs.includes(k)) throw new Error(`content.js: expected ${k}`);
+  }
+  if (!contentJs.includes("id: 'ng_clarity'")) {
+    throw new Error('content.js: expected Nigerian clarity pair category');
   }
 
   console.log('smoke-node: ok', { port, checks: checks.length });

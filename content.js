@@ -18,6 +18,18 @@
 
     minimalPairCategories: [
       {
+        id: 'ng_clarity',
+        title: 'Nigerian → American clarity',
+        tip: 'Common Nigerian English patterns: keep TH (think, this), finish final clusters (best, asked), and let unstressed words relax (to → tə). Keep your voice — sharpen the rhythm.',
+        pairs: [
+          ['think', 'tink'], ['this', 'dis'], ['three', 'tree'], ['brother', 'broda'],
+          ['with', 'wit'], ['that', 'dat'], ['through', 'tru'], ['breath', 'bret'],
+          ['mother', 'mada'], ['weather', 'wedda'], ['nothing', 'noting'], ['thirty', 'tirty'],
+          ['best', 'bes'], ['asked', 'as'], ['walked', 'walk'], ['next', 'nes'],
+          ['kept', 'kep'], ['helped', 'help'], ['fixed', 'fix'], ['lift', 'lif'],
+        ],
+      },
+      {
         id: 'r_vs_l',
         title: 'R vs L',
         tip: 'For American /r/, curl the tongue tip toward the roof of the mouth without touching; for /l/, let the tongue tip touch the ridge behind the upper teeth.',
@@ -289,6 +301,126 @@
       'Tell a one-minute story about cooking something new.',
       'Describe public speaking moments that went well or poorly.',
       'Talk about a city you lived in and how it sounds at night.',
+    ],
+
+    /* ---- Personalized coach: Nigerian-English speakers aiming for clear
+       Nigerian-American clarity, with stutter-friendly fluency tools. ---- */
+
+    nigerianPairCategory: {
+      id: 'ng_clarity',
+      title: 'Nigerian → American clarity',
+      tip: 'Common Nigerian English patterns: keep TH (think, this), finish final clusters (best, asked), and let unstressed words relax (to → tə). Keep your voice — sharpen the rhythm.',
+      pairs: [
+        ['think', 'tink'], ['this', 'dis'], ['three', 'tree'], ['brother', 'broda'],
+        ['with', 'wit'], ['that', 'dat'], ['through', 'tru'], ['breath', 'bret'],
+        ['mother', 'mada'], ['weather', 'wedda'], ['nothing', 'noting'], ['thirty', 'tirty'],
+        ['best', 'bes'], ['asked', 'as'], ['walked', 'walk'], ['next', 'nes'],
+        ['kept', 'kep'], ['helped', 'help'], ['fixed', 'fix'], ['lift', 'lif'],
+        ['for me', 'fer me'], ['to the', 'tə thə'], ['and you', 'an you'], ['have to', 'hafta'],
+      ],
+    },
+
+    breathPlan: { inhaleSec: 4, holdInSec: 1, exhaleSec: 6, holdOutSec: 1, defaultRounds: 6 },
+
+    pacingPassages: [
+      {
+        id: 'pace_intro',
+        title: 'Self-introduction (pacing)',
+        text: 'My name is one I am proud of. I come from Nigeria. I live my own life. I am learning calm and clear American rhythm.',
+      },
+      {
+        id: 'pace_work',
+        title: 'About my work (pacing)',
+        text: 'I work with people. I share my ideas in clear sentences. I pause between groups. I do not need to rush.',
+      },
+      {
+        id: 'pace_day',
+        title: 'About my day (pacing)',
+        text: 'I wake up. I drink water. I think before I speak. I let each word land. I move at my own pace.',
+      },
+      {
+        id: 'pace_easy',
+        title: 'Easy starters (pacing)',
+        text: 'I am here. I am calm. I have time. I have words. I have breath. I am ready.',
+      },
+    ],
+
+    easyOnsetWords: [
+      'apple', 'ocean', 'easy', 'open', 'always', 'every', 'about',
+      'under', 'over', 'around', 'after', 'inside', 'evening',
+      'office', 'orange', 'idea', 'enough', 'until', 'upper', 'island',
+    ],
+
+    stressSentences: [
+      { text: 'I am going to the STORE this AFTERNOON.', stressed: ['going', 'store', 'afternoon'], note: 'Content words carry the beat; small words relax.' },
+      { text: 'She SPOKE clearly during the MEETING.', stressed: ['spoke', 'clearly', 'meeting'], note: 'Verb + adverb + topic noun.' },
+      { text: 'We can FIX this PROBLEM by TUESDAY.', stressed: ['fix', 'problem', 'tuesday'], note: 'Time words anchor the rhythm.' },
+      { text: 'I REALLY think this IDEA is WORTH trying.', stressed: ['really', 'think', 'idea', 'worth', 'trying'], note: 'Stress what you mean most.' },
+      { text: 'The TEAM finished the REPORT before LUNCH.', stressed: ['team', 'finished', 'report', 'lunch'], note: 'Subject, verb, object, time.' },
+      { text: 'I would LOVE to JOIN you for COFFEE.', stressed: ['love', 'join', 'coffee'], note: 'Polite invite — soft but clear stress.' },
+      { text: 'Please SEND the FILE when you are READY.', stressed: ['send', 'file', 'ready'], note: '“Please” stays gentle.' },
+      { text: 'My NAME is yours to FILL in.', stressed: ['name', 'fill'], note: 'Try this with your real name.' },
+      { text: 'I am from NIGERIA and I LIVE in this CITY.', stressed: ['nigeria', 'live', 'city'], note: 'Identity sentence.' },
+      { text: 'Let us TAKE a short BREAK and CONTINUE.', stressed: ['take', 'break', 'continue'], note: 'Verbs lead the rhythm.' },
+    ],
+
+    schwaPhrases: [
+      { written: 'I want to go to the store.', schwa: 'I want tə go tə thə store.', note: '“to” and “the” reduce to schwa in fast speech.' },
+      { written: 'It is for you and me.', schwa: 'It is fər you ən me.', note: '“for” relaxes; “and” often becomes “ən”.' },
+      { written: 'A cup of coffee, please.', schwa: 'A cup ə coffee, please.', note: '“of” reduces almost to “ə”.' },
+      { written: 'Can you give me the report?', schwa: 'Cən you give me thə report?', note: '“can” and “the” relax.' },
+      { written: 'I am going to call him later.', schwa: 'I am gonna call ’im later.', note: '“going to” → “gonna”; “him” often loses the h.' },
+      { written: 'What are you doing tonight?', schwa: 'Whaddə ya doin tonight?', note: 'Connected speech in casual American.' },
+      { written: 'Let me know what you think.', schwa: 'Lemme know whatcha think.', note: '“Let me” and “what you” compress.' },
+      { written: 'I have to leave in a minute.', schwa: 'I hafta leave in ə minute.', note: '“have to” → “hafta”.' },
+    ],
+
+    linkingPhrases: [
+      { written: 'an apple', linked: 'a‿napple', note: 'Final n links straight into the next vowel.' },
+      { written: 'turn it off', linked: 'tur‿ni‿toff', note: 'Three words ride together as one breath.' },
+      { written: 'cup of tea', linked: 'cu‿pə‿tea', note: 'V→C bridge with reduced “of”.' },
+      { written: 'pick it up', linked: 'pi‿ki‿tup', note: 'Common phrasal verb pattern.' },
+      { written: 'is it okay', linked: 'i‿zi‿tokay', note: 'Question rhythm with linking.' },
+      { written: 'thanks a lot', linked: 'thank‿sə‿lot', note: '“a” sits between the two stressed words.' },
+      { written: 'check it out', linked: 'che‿ki‿tout', note: 'Three quick beats.' },
+      { written: 'how are you', linked: 'how‿ə‿you', note: 'Reduces to a smooth glide in casual speech.' },
+    ],
+
+    flapTWords: [
+      { word: 'water', flap: 'wadder' },
+      { word: 'better', flap: 'bedder' },
+      { word: 'butter', flap: 'budder' },
+      { word: 'matter', flap: 'madder' },
+      { word: 'city', flap: 'siddy' },
+      { word: 'pretty', flap: 'priddy' },
+      { word: 'little', flap: 'liddle' },
+      { word: 'metal', flap: 'medal' },
+      { word: 'photo', flap: 'fodo' },
+      { word: 'data', flap: 'dada' },
+      { word: 'later', flap: 'lader' },
+      { word: 'meeting', flap: 'meeding' },
+      { word: 'getting', flap: 'gedding' },
+      { word: 'waiter', flap: 'wader' },
+    ],
+
+    fillerWords: ['um', 'uh', 'like', 'you know', 'sort of', 'kind of', 'basically', 'literally', 'actually', 'so', 'right', 'i mean'],
+
+    eloquencePhrases: [
+      'Let me share my perspective on this.',
+      'That is a thoughtful question — here is how I see it.',
+      'I appreciate you raising that. My view is the following.',
+      'In my experience, the most useful approach is this one.',
+      'I would put it this way: clarity first, speed second.',
+      'Allow me a moment to think before I answer.',
+      'The point I want to make is straightforward.',
+      'Let me build on what you just said.',
+    ],
+
+    dailyPlan: [
+      { id: 'breath', label: 'Breath warm-up', minutes: 2, view: 'fluency', sub: 'breath', desc: '4-1-6-1 cycles to settle the voice.' },
+      { id: 'pacing', label: 'Slow pacing read', minutes: 5, view: 'fluency', sub: 'pacing', desc: 'One word per beat — fluency on rails.' },
+      { id: 'stress', label: 'Stress and rhythm', minutes: 5, view: 'accent', sub: 'stress', desc: 'Train American beats on real sentences.' },
+      { id: 'free', label: 'Free speech with filler check', minutes: 3, view: 'convo', sub: 'prompt', desc: 'Speak freely; we count fillers for you.' },
     ],
   };
 })();

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="AccentCoach — gentle American English clarity practice using your browser." />
-  <title>AccentCoach</title>
+  <meta name="description" content="AccentCoach — Nigerian-American clarity practice with stutter-friendly fluency tools, in your browser." />
+  <title>AccentCoach — Nigerian-American clarity</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -15,7 +15,7 @@
       <span class="logo" aria-hidden="true">◆</span>
       <div>
         <h1 class="title">AccentCoach</h1>
-        <p class="tagline">Calm practice for a clearer American English sound.</p>
+        <p class="tagline">Nigerian → American clarity. Calm fluency. Eloquent speech.</p>
       </div>
     </div>
     <div class="tabs-scroll">
@@ -25,6 +25,8 @@
         <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-passage" id="tab-passage" data-view="passage">Read aloud</button>
         <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-compare" id="tab-compare" data-view="compare">Record &amp; compare</button>
         <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-convo" id="tab-convo" data-view="convo">Shadow &amp; prompts</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-fluency" id="tab-fluency" data-view="fluency">Fluency lab</button>
+        <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-accent" id="tab-accent" data-view="accent">Accent</button>
         <button type="button" class="tab" role="tab" aria-selected="false" aria-controls="view-progress" id="tab-progress" data-view="progress">Progress</button>
       </nav>
     </div>
@@ -39,7 +41,7 @@
     <section id="view-home" class="view view--active" role="tabpanel" aria-labelledby="tab-home">
       <div class="panel hero">
         <h2>Welcome</h2>
-        <p class="lede">Pick a mode, warm up your voice, and move at your own pace. Chrome or Edge works best for listening feedback.</p>
+        <p class="lede">Built for a Nigerian voice that wants <strong>clear American rhythm</strong> — with calm tools to soften stuttering and grow eloquence. Chrome or Edge gives the best listening feedback.</p>
         <div class="stats-row" aria-live="polite">
           <div class="stat-card">
             <span class="stat-label">Today’s streak</span>
@@ -53,12 +55,27 @@
           </div>
         </div>
         <div class="warmup card" id="daily-warmup"></div>
+        <div class="card daily-plan" id="daily-plan" aria-label="Today's plan">
+          <div class="daily-plan__head">
+            <h3>Today’s 15-minute plan</h3>
+            <p class="meta">Breath → pacing → rhythm → free speech. Built for stutter-friendly fluency and Nigerian-American clarity.</p>
+          </div>
+          <ol class="plan-steps" id="plan-steps"></ol>
+        </div>
         <div class="actions-row">
           <button type="button" class="btn btn-primary" id="btn-mic-check">Microphone check</button>
           <span class="mic-status" id="mic-status" role="status"></span>
         </div>
       </div>
       <div class="mode-grid" role="navigation" aria-label="Practice modes">
+        <a href="#" class="mode-card" data-jump="fluency">
+          <h3>Fluency lab</h3>
+          <p>Breath, paced reading, easy onsets — calm tools for steadier speech.</p>
+        </a>
+        <a href="#" class="mode-card" data-jump="accent">
+          <h3>Accent shaping</h3>
+          <p>Stress, schwa, linking, flap-T, and Nigerian-pair drills.</p>
+        </a>
         <a href="#" class="mode-card" data-jump="pairs">
           <h3>Minimal pairs</h3>
           <p>Hear a native model, then say the highlighted word.</p>
@@ -73,7 +90,7 @@
         </a>
         <a href="#" class="mode-card" data-jump="convo">
           <h3>Shadow &amp; prompts</h3>
-          <p>Dialogue shadowing or open prompts.</p>
+          <p>Dialogue shadowing or open prompts with filler-word coaching.</p>
         </a>
       </div>
     </section>
@@ -194,6 +211,11 @@
           </div>
           <p class="rec-indicator" id="prompt-rec-indicator" hidden><span class="pulse-dot" aria-hidden="true"></span><span>Recording…</span></p>
           <div class="card" id="prompt-transcript" aria-live="polite"></div>
+          <div class="card filler-card" id="prompt-fillers" hidden>
+            <h4>Filler-word check</h4>
+            <p class="meta" id="prompt-filler-summary"></p>
+            <ul class="chip-list" id="prompt-filler-list"></ul>
+          </div>
           <audio id="prompt-audio" controls class="audio-inline" hidden></audio>
           <div class="sliders card">
             <label>Clarity <input type="range" id="slider-clarity" min="1" max="5" value="3" aria-valuetext="3 of 5" /></label>
@@ -201,6 +223,97 @@
             <label>Confidence <input type="range" id="slider-confidence" min="1" max="5" value="3" /></label>
             <button type="button" class="btn" id="prompt-save-self">Save self-check</button>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fluency lab -->
+    <section id="view-fluency" class="view" hidden role="tabpanel" aria-labelledby="tab-fluency">
+      <div class="panel">
+        <h2>Fluency lab</h2>
+        <p class="lede">Calm tools for steadier speech: breath, paced reading, and gentle starts. Designed for people who stutter and for anyone who wants smoother flow.</p>
+        <div class="subtabs" role="tablist" aria-label="Fluency submodes">
+          <button type="button" class="subtab" role="tab" aria-selected="true" id="subtab-breath" data-fsub="breath">Breath</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-pacing" data-fsub="pacing">Pacing</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-onset" data-fsub="onset">Easy onset</button>
+        </div>
+
+        <div id="fluency-breath" class="fluency-sub">
+          <p class="lede">Inhale 4 · hold 1 · exhale 6 · hold 1. Three rounds settles the voice; six is a full warm-up.</p>
+          <div class="breath-stage card">
+            <div class="breath-circle" id="breath-circle"><span id="breath-label">Ready</span></div>
+            <p class="meta" aria-live="polite"><span id="breath-cycles">0</span> cycles · <span id="breath-time">0:00</span></p>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="breath-start">Start</button>
+            <button type="button" class="btn btn-danger" id="breath-stop" disabled>Stop</button>
+          </div>
+        </div>
+
+        <div id="fluency-pacing" class="fluency-sub" hidden>
+          <p class="lede">Set a calm beat and read <strong>one word per beat</strong>. Lower BPM gives stronger fluency support; raise it as you feel ready.</p>
+          <div class="field-row">
+            <label class="field">
+              <span>Beats per minute (<span id="pace-bpm-val">72</span>)</span>
+              <input type="range" id="pace-bpm" min="40" max="140" step="2" value="72" />
+            </label>
+            <label class="field">
+              <span>Passage</span>
+              <select id="pace-passage" aria-label="Pacing passage"></select>
+            </label>
+          </div>
+          <div class="passage card" id="pace-text" aria-live="polite"></div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="pace-start">Start beat</button>
+            <button type="button" class="btn btn-danger" id="pace-stop" disabled>Stop</button>
+            <label class="inline-check"><input type="checkbox" id="pace-mute" /> Mute click</label>
+          </div>
+          <p class="tip">Tip: feel the click in your chest, not your jaw. Breathe between sentences.</p>
+        </div>
+
+        <div id="fluency-onset" class="fluency-sub" hidden>
+          <p class="lede">Practice gentle vowel onsets. Breathe out a soft sigh first, then ease into the word. Tap a word to hear a slow, soft model.</p>
+          <ul class="chip-list" id="onset-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Accent shaping -->
+    <section id="view-accent" class="view" hidden role="tabpanel" aria-labelledby="tab-accent">
+      <div class="panel">
+        <h2>Accent shaping</h2>
+        <p class="lede">Targeted drills for Nigerian → American clarity. Keep your voice; sharpen the rhythm.</p>
+        <div class="subtabs" role="tablist" aria-label="Accent submodes">
+          <button type="button" class="subtab" role="tab" aria-selected="true" id="subtab-stress" data-asub="stress">Stress</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-schwa" data-asub="schwa">Schwa</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-linking" data-asub="linking">Linking</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-flap" data-asub="flap">Flap T</button>
+          <button type="button" class="subtab" role="tab" aria-selected="false" id="subtab-eloquence" data-asub="eloquence">Eloquence</button>
+        </div>
+
+        <div id="accent-stress" class="accent-sub">
+          <p class="lede">In American English, content words (nouns, main verbs, adjectives) carry the beat; small grammar words relax. Tap a sentence to hear it.</p>
+          <ul class="drill-list" id="stress-list"></ul>
+        </div>
+
+        <div id="accent-schwa" class="accent-sub" hidden>
+          <p class="lede">Schwa (ə) is the most common American vowel. Unstressed syllables and small words reduce to it.</p>
+          <ul class="drill-list" id="schwa-list"></ul>
+        </div>
+
+        <div id="accent-linking" class="accent-sub" hidden>
+          <p class="lede">American speech links words together — final consonants flow into next-word vowels. Read each phrase as one breath.</p>
+          <ul class="drill-list" id="linking-list"></ul>
+        </div>
+
+        <div id="accent-flap" class="accent-sub" hidden>
+          <p class="lede">Between vowels, American /t/ becomes a quick flap (almost a /d/). Tap to hear careful vs flapped.</p>
+          <ul class="drill-list" id="flap-list"></ul>
+        </div>
+
+        <div id="accent-eloquence" class="accent-sub" hidden>
+          <p class="lede">Power phrases for clear, confident speech. Use them to start a thought or to buy a calm second to think.</p>
+          <ul class="drill-list" id="eloquence-list"></ul>
         </div>
       </div>
     </section>

@@ -266,6 +266,8 @@
     }
     teardownAudioGraph();
     hideRecIndicators();
+    stopBreath();
+    stopPacing();
   }
 
   function teardownAudioGraph() {
@@ -366,6 +368,8 @@
     if (name === 'passage') initPassageView();
     if (name === 'compare') initCompareView();
     if (name === 'convo') initConvoView();
+    if (name === 'fluency') initFluencyView();
+    if (name === 'accent') initAccentView();
   }
 
   function wireNav() {
@@ -377,6 +381,21 @@
         e.preventDefault();
         setView(a.dataset.jump);
       });
+    });
+    document.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-jump-view]');
+      if (!t) return;
+      e.preventDefault();
+      const v = t.dataset.jumpView;
+      const sub = t.dataset.jumpSub || '';
+      setView(v);
+      if (sub) {
+        requestAnimationFrame(() => {
+          if (v === 'fluency') showFluencySub(sub);
+          else if (v === 'accent') showAccentSub(sub);
+          else if (v === 'convo') setConvoSub(sub);
+        });
+      }
     });
   }
 
@@ -447,6 +466,30 @@
     if (warm) {
       warm.innerHTML = `<strong>Daily warm-up</strong><p>${tips[day % tips.length]}</p>`;
     }
+    renderDailyPlan();
+  }
+
+  function renderDailyPlan() {
+    const list = $('#plan-steps');
+    if (!list) return;
+    const plan = content.dailyPlan || [];
+    list.innerHTML = '';
+    plan.forEach((step, i) => {
+      const li = document.createElement('li');
+      li.className = 'plan-step';
+      li.innerHTML = `
+        <div class="plan-step__index" aria-hidden="true">${i + 1}</div>
+        <div class="plan-step__body">
+          <div class="plan-step__head">
+            <span class="plan-step__label">${escapeHtml(step.label)}</span>
+            <span class="plan-step__min">${step.minutes} min</span>
+          </div>
+          <p class="plan-step__desc">${escapeHtml(step.desc || '')}</p>
+        </div>
+        <button type="button" class="btn btn-primary plan-step__go" data-jump-view="${step.view}" data-jump-sub="${step.sub || ''}">Start</button>
+      `;
+      list.appendChild(li);
+    });
   }
 
   /** --- Minimal pairs --- */
@@ -1310,6 +1353,8 @@
     if (box) box.innerHTML = `<p>${escapeHtml(p)}</p>`;
     $('#prompt-transcript').textContent = '';
     $('#prompt-audio').hidden = true;
+    const card = $('#prompt-fillers');
+    if (card) card.hidden = true;
     disposePromptUrl();
   }
 
@@ -1344,6 +1389,7 @@
             textBuf += ev.results[i][0].transcript;
           }
           $('#prompt-transcript').textContent = textBuf;
+          renderFillerReport(textBuf);
         };
         rec.onerror = () => {};
         state.recognition = rec;
@@ -1376,6 +1422,7 @@
           a.src = promptObjectUrl;
           a.hidden = false;
         }
+        renderFillerReport($('#prompt-transcript')?.textContent || '');
         bumpPracticeDay();
       };
       recm.start();
@@ -1515,6 +1562,485 @@
     ['#chart-accuracy', '#wave-native', '#wave-user'].forEach((sel) => {
       const el = document.querySelector(sel);
       if (el) state.canvasResizeObs.observe(el);
+    });
+  }
+
+  /** --- Filler-word counter (prompt mode) --- */
+  function countFillers(text) {
+    const fillers = (content.fillerWords && content.fillerWords.length)
+      ? content.fillerWords
+      : ['um', 'uh', 'like', 'you know', 'so', 'actually', 'basically', 'literally'];
+    const lower = String(text || '').toLowerCase();
+    const counts = {};
+    let total = 0;
+    fillers.forEach((f) => {
+      const escaped = f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`\\b${escaped}\\b`, 'gi');
+      const matches = lower.match(re);
+      const n = matches ? matches.length : 0;
+      if (n > 0) {
+        counts[f] = n;
+        total += n;
+      }
+    });
+    return { counts, total };
+  }
+
+  function renderFillerReport(text) {
+    const card = $('#prompt-fillers');
+    const summary = $('#prompt-filler-summary');
+    const list = $('#prompt-filler-list');
+    if (!card || !summary || !list) return;
+    const trimmed = String(text || '').trim();
+    if (!trimmed) {
+      card.hidden = true;
+      return;
+    }
+    const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+    const { counts, total } = countFillers(trimmed);
+    card.hidden = false;
+    list.innerHTML = '';
+    if (total === 0) {
+      summary.textContent = `No filler words detected in ${wordCount} words. Clean delivery.`;
+      return;
+    }
+    const pct = wordCount ? Math.round((total / wordCount) * 1000) / 10 : 0;
+    summary.textContent = `${total} filler${total === 1 ? '' : 's'} in ${wordCount} words (${pct}%). Aim for under 3%.`;
+    Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([w, n]) => {
+        const li = document.createElement('li');
+        li.className = 'chip';
+        li.textContent = `${w} × ${n}`;
+        list.appendChild(li);
+      });
+  }
+
+  /** --- Fluency lab --- */
+  function initFluencyView() {
+    const root = $('#view-fluency');
+    if (!root || root.dataset.ready === '1') return;
+    root.dataset.ready = '1';
+    Array.from(root.querySelectorAll('[data-fsub]')).forEach((btn) => {
+      btn.addEventListener('click', () => showFluencySub(btn.dataset.fsub));
+    });
+    $('#breath-start')?.addEventListener('click', () => startBreath());
+    $('#breath-stop')?.addEventListener('click', () => stopBreath(true));
+    initPacingControls();
+    renderEasyOnsetWords();
+  }
+
+  function showFluencySub(name) {
+    stopBreath();
+    stopPacing();
+    const subs = { breath: '#fluency-breath', pacing: '#fluency-pacing', onset: '#fluency-onset' };
+    Object.entries(subs).forEach(([k, sel]) => {
+      const el = document.querySelector(sel);
+      if (el) el.hidden = k !== name;
+    });
+    $$('[data-fsub]').forEach((b) => {
+      b.setAttribute('aria-selected', b.dataset.fsub === name ? 'true' : 'false');
+    });
+  }
+
+  /* Breath: 4-1-6-1 cycle, JS-driven so we can respect reduced-motion. */
+  function startBreath() {
+    if (state.breath?.active) return;
+    const plan = content.breathPlan || { inhaleSec: 4, holdInSec: 1, exhaleSec: 6, holdOutSec: 1 };
+    const phases = [
+      { name: 'Inhale', dur: plan.inhaleSec, scale: 1 },
+      { name: 'Hold', dur: plan.holdInSec, scale: 1 },
+      { name: 'Exhale', dur: plan.exhaleSec, scale: 0 },
+      { name: 'Hold', dur: plan.holdOutSec, scale: 0 },
+    ];
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const circle = $('#breath-circle');
+    const label = $('#breath-label');
+    const cyclesEl = $('#breath-cycles');
+    const timeEl = $('#breath-time');
+    const startBtn = $('#breath-start');
+    const stopBtn = $('#breath-stop');
+    state.breath = { active: true, idx: 0, cycles: 0, t0: performance.now(), raf: 0, timer: 0 };
+    startBtn?.setAttribute('disabled', 'true');
+    stopBtn?.removeAttribute('disabled');
+
+    function setVisual(phase) {
+      if (!circle) return;
+      if (reduced) {
+        circle.style.transform = phase.scale === 1 ? 'scale(1.25)' : 'scale(1)';
+      } else {
+        circle.style.transition = `transform ${phase.dur}s ease-in-out`;
+        circle.style.transform = phase.scale === 1 ? 'scale(1.45)' : 'scale(0.85)';
+      }
+      circle.dataset.phase = phase.name.toLowerCase();
+      if (label) label.textContent = phase.name;
+    }
+
+    function tickClock() {
+      if (!state.breath?.active) return;
+      const sec = Math.floor((performance.now() - state.breath.t0) / 1000);
+      if (timeEl) timeEl.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      state.breath.raf = requestAnimationFrame(tickClock);
+    }
+
+    function next() {
+      if (!state.breath?.active) return;
+      const phase = phases[state.breath.idx % phases.length];
+      setVisual(phase);
+      state.breath.timer = setTimeout(() => {
+        state.breath.idx += 1;
+        if (state.breath.idx % phases.length === 0) {
+          state.breath.cycles += 1;
+          if (cyclesEl) cyclesEl.textContent = String(state.breath.cycles);
+        }
+        next();
+      }, Math.max(200, phase.dur * 1000));
+    }
+
+    if (label) label.textContent = phases[0].name;
+    if (cyclesEl) cyclesEl.textContent = '0';
+    if (timeEl) timeEl.textContent = '0:00';
+    next();
+    state.breath.raf = requestAnimationFrame(tickClock);
+  }
+
+  function stopBreath(announce) {
+    if (!state.breath) return;
+    if (state.breath.timer) clearTimeout(state.breath.timer);
+    if (state.breath.raf) cancelAnimationFrame(state.breath.raf);
+    const wasActive = state.breath.active;
+    const cycles = state.breath.cycles || 0;
+    state.breath = { active: false, idx: 0, cycles: 0, t0: 0, raf: 0, timer: 0 };
+    const circle = $('#breath-circle');
+    if (circle) {
+      circle.style.transition = 'transform 240ms ease-out';
+      circle.style.transform = 'scale(1)';
+      circle.dataset.phase = '';
+    }
+    const label = $('#breath-label');
+    if (label) label.textContent = wasActive ? 'Done' : 'Ready';
+    $('#breath-start')?.removeAttribute('disabled');
+    $('#breath-stop')?.setAttribute('disabled', 'true');
+    if (announce && wasActive) {
+      showToast(`Breath warm-up: ${cycles} cycle${cycles === 1 ? '' : 's'}.`);
+      if (cycles >= 1) bumpPracticeDay();
+    }
+  }
+
+  /* Pacing metronome — Web Audio scheduling for steady beats. */
+  function initPacingControls() {
+    const sel = $('#pace-passage');
+    if (sel && sel.dataset.ready !== '1') {
+      sel.dataset.ready = '1';
+      sel.innerHTML = '';
+      (content.pacingPassages || []).forEach((p) => {
+        const o = document.createElement('option');
+        o.value = p.id;
+        o.textContent = p.title;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', () => renderPacingPassage());
+    }
+    const bpm = $('#pace-bpm');
+    const bpmVal = $('#pace-bpm-val');
+    if (bpm && bpm.dataset.ready !== '1') {
+      bpm.dataset.ready = '1';
+      bpm.addEventListener('input', () => {
+        if (bpmVal) bpmVal.textContent = bpm.value;
+      });
+    }
+    $('#pace-start')?.addEventListener('click', () => startPacing());
+    $('#pace-stop')?.addEventListener('click', () => stopPacing(true));
+    renderPacingPassage();
+  }
+
+  function renderPacingPassage() {
+    const sel = $('#pace-passage');
+    const box = $('#pace-text');
+    if (!box) return;
+    const id = sel?.value;
+    const p = (content.pacingPassages || []).find((x) => x.id === id) || (content.pacingPassages || [])[0];
+    if (!p) {
+      box.textContent = 'No passage available.';
+      return;
+    }
+    const words = p.text.split(/\s+/).filter(Boolean);
+    box.innerHTML = words
+      .map((w, i) => `<span class="word" data-i="${i}">${escapeHtml(w)}</span>`)
+      .join(' ');
+  }
+
+  function startPacing() {
+    if (state.pace?.active) return;
+    const bpm = Number($('#pace-bpm')?.value || 72);
+    const muted = !!$('#pace-mute')?.checked;
+    const wordEls = $$('#pace-text .word');
+    if (!wordEls.length) return;
+    let ctx = null;
+    try {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (C) ctx = new C();
+    } catch { /* ignore */ }
+    state.pace = {
+      active: true,
+      ctx,
+      bpm,
+      muted,
+      next: ctx ? ctx.currentTime + 0.1 : 0,
+      beatIdx: 0,
+      total: wordEls.length,
+      timer: 0,
+    };
+    wordEls.forEach((el) => el.classList.remove('w-curr', 'w-ok'));
+    $('#pace-start')?.setAttribute('disabled', 'true');
+    $('#pace-stop')?.removeAttribute('disabled');
+    pacingTick();
+  }
+
+  function pacingTick() {
+    const p = state.pace;
+    if (!p?.active) return;
+    const period = 60 / p.bpm;
+    if (p.ctx) {
+      while (p.next < p.ctx.currentTime + 0.12) {
+        scheduleClick(p.ctx, p.next, p.muted);
+        const idx = p.beatIdx;
+        const delayMs = Math.max(0, (p.next - p.ctx.currentTime) * 1000);
+        setTimeout(() => highlightPaceWord(idx), delayMs);
+        p.beatIdx += 1;
+        p.next += period;
+        if (p.beatIdx >= p.total) {
+          p.timer = setTimeout(() => stopPacing(true), Math.max(100, delayMs + 200));
+          return;
+        }
+      }
+      p.timer = setTimeout(pacingTick, 30);
+    } else {
+      const idx = p.beatIdx;
+      highlightPaceWord(idx);
+      p.beatIdx += 1;
+      if (p.beatIdx >= p.total) {
+        p.timer = setTimeout(() => stopPacing(true), period * 1000);
+        return;
+      }
+      p.timer = setTimeout(pacingTick, period * 1000);
+    }
+  }
+
+  function scheduleClick(ctx, when, muted) {
+    if (muted) return;
+    try {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(0.18, when + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.06);
+      o.connect(g).connect(ctx.destination);
+      o.start(when);
+      o.stop(when + 0.08);
+    } catch { /* ignore */ }
+  }
+
+  function highlightPaceWord(i) {
+    const wordEls = $$('#pace-text .word');
+    if (!wordEls.length) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    wordEls.forEach((el, j) => {
+      el.classList.toggle('w-curr', j === i);
+      if (j < i) el.classList.add('w-ok');
+    });
+    const cur = wordEls[i];
+    if (cur && !reduced) {
+      try {
+        cur.scrollIntoView({ block: 'nearest', behavior: 'smooth', inline: 'nearest' });
+      } catch { /* ignore */ }
+    }
+  }
+
+  function stopPacing(announce) {
+    if (!state.pace) return;
+    if (state.pace.timer) clearTimeout(state.pace.timer);
+    const wasActive = state.pace.active;
+    const total = state.pace.total || 0;
+    const done = state.pace.beatIdx || 0;
+    try {
+      if (state.pace.ctx && state.pace.ctx.state !== 'closed') state.pace.ctx.close();
+    } catch { /* ignore */ }
+    state.pace = { active: false };
+    $('#pace-start')?.removeAttribute('disabled');
+    $('#pace-stop')?.setAttribute('disabled', 'true');
+    if (announce && wasActive) {
+      const finished = Math.min(done, total);
+      showToast(`Pacing read: ${finished}/${total} words.`);
+      if (finished >= Math.max(1, Math.floor(total * 0.6))) bumpPracticeDay();
+    }
+  }
+
+  function renderEasyOnsetWords() {
+    const list = $('#onset-list');
+    if (!list || list.dataset.ready === '1') return;
+    list.dataset.ready = '1';
+    const words = content.easyOnsetWords || [];
+    list.innerHTML = '';
+    words.forEach((w) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip chip-btn';
+      btn.textContent = w;
+      btn.addEventListener('click', () => speak(w, 0.75));
+      li.appendChild(btn);
+      list.appendChild(li);
+    });
+  }
+
+  /** --- Accent shaping --- */
+  function initAccentView() {
+    const root = $('#view-accent');
+    if (!root || root.dataset.ready === '1') return;
+    root.dataset.ready = '1';
+    Array.from(root.querySelectorAll('[data-asub]')).forEach((btn) => {
+      btn.addEventListener('click', () => showAccentSub(btn.dataset.asub));
+    });
+    renderStressList();
+    renderSchwaList();
+    renderLinkingList();
+    renderFlapList();
+    renderEloquenceList();
+  }
+
+  function showAccentSub(name) {
+    cancelSpeech();
+    const subs = {
+      stress: '#accent-stress',
+      schwa: '#accent-schwa',
+      linking: '#accent-linking',
+      flap: '#accent-flap',
+      eloquence: '#accent-eloquence',
+    };
+    Object.entries(subs).forEach(([k, sel]) => {
+      const el = document.querySelector(sel);
+      if (el) el.hidden = k !== name;
+    });
+    $$('[data-asub]').forEach((b) => {
+      b.setAttribute('aria-selected', b.dataset.asub === name ? 'true' : 'false');
+    });
+  }
+
+  function renderStressList() {
+    const list = $('#stress-list');
+    if (!list) return;
+    const items = content.stressSentences || [];
+    list.innerHTML = '';
+    items.forEach((s) => {
+      const stressed = new Set((s.stressed || []).map((w) => w.toLowerCase()));
+      const tokens = s.text.split(/(\s+)/).map((tok) => {
+        if (/^\s+$/.test(tok)) return tok;
+        const bare = tok.toLowerCase().replace(/[^a-z']/g, '');
+        const isStress = stressed.has(bare) || /[A-Z]{2,}/.test(tok);
+        return isStress ? `<strong class="stress-w">${escapeHtml(tok)}</strong>` : escapeHtml(tok);
+      }).join('');
+      const li = document.createElement('li');
+      li.className = 'drill';
+      li.innerHTML = `
+        <p class="drill-text">${tokens}</p>
+        <p class="drill-note">${escapeHtml(s.note || '')}</p>
+        <div class="btn-row">
+          <button type="button" class="btn" data-act="play">Hear it</button>
+          <button type="button" class="btn" data-act="slow">Slow</button>
+        </div>
+      `;
+      const plain = s.text.replace(/[A-Z]{2,}/g, (m) => m.toLowerCase());
+      li.querySelector('[data-act="play"]').addEventListener('click', () => speak(plain, 0.95));
+      li.querySelector('[data-act="slow"]').addEventListener('click', () => speak(plain, 0.7));
+      list.appendChild(li);
+    });
+  }
+
+  function renderSchwaList() {
+    const list = $('#schwa-list');
+    if (!list) return;
+    const items = content.schwaPhrases || [];
+    list.innerHTML = '';
+    items.forEach((s) => {
+      const li = document.createElement('li');
+      li.className = 'drill';
+      li.innerHTML = `
+        <p class="drill-text"><span class="muted">Written:</span> ${escapeHtml(s.written)}</p>
+        <p class="drill-text drill-text--alt"><span class="muted">Spoken:</span> ${escapeHtml(s.schwa)}</p>
+        <p class="drill-note">${escapeHtml(s.note || '')}</p>
+        <div class="btn-row">
+          <button type="button" class="btn" data-act="careful">Careful</button>
+          <button type="button" class="btn btn-primary" data-act="natural">Natural</button>
+        </div>
+      `;
+      li.querySelector('[data-act="careful"]').addEventListener('click', () => speak(s.written, 0.7));
+      li.querySelector('[data-act="natural"]').addEventListener('click', () => speak(s.written, 1.0));
+      list.appendChild(li);
+    });
+  }
+
+  function renderLinkingList() {
+    const list = $('#linking-list');
+    if (!list) return;
+    const items = content.linkingPhrases || [];
+    list.innerHTML = '';
+    items.forEach((s) => {
+      const li = document.createElement('li');
+      li.className = 'drill';
+      li.innerHTML = `
+        <p class="drill-text">${escapeHtml(s.written)}</p>
+        <p class="drill-text drill-text--alt">${escapeHtml(s.linked)}</p>
+        <p class="drill-note">${escapeHtml(s.note || '')}</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" data-act="play">Hear linked</button>
+        </div>
+      `;
+      li.querySelector('[data-act="play"]').addEventListener('click', () => speak(s.written, 1.05));
+      list.appendChild(li);
+    });
+  }
+
+  function renderFlapList() {
+    const list = $('#flap-list');
+    if (!list) return;
+    const items = content.flapTWords || [];
+    list.innerHTML = '';
+    items.forEach((s) => {
+      const li = document.createElement('li');
+      li.className = 'drill drill--row';
+      li.innerHTML = `
+        <span class="drill-text drill-text--big">${escapeHtml(s.word)} <span class="muted">→ ${escapeHtml(s.flap)}</span></span>
+        <div class="btn-row">
+          <button type="button" class="btn" data-act="careful">Careful T</button>
+          <button type="button" class="btn btn-primary" data-act="flap">Flap</button>
+        </div>
+      `;
+      li.querySelector('[data-act="careful"]').addEventListener('click', () => speak(s.word, 0.75));
+      li.querySelector('[data-act="flap"]').addEventListener('click', () => speak(s.word, 1.1));
+      list.appendChild(li);
+    });
+  }
+
+  function renderEloquenceList() {
+    const list = $('#eloquence-list');
+    if (!list) return;
+    const items = content.eloquencePhrases || [];
+    list.innerHTML = '';
+    items.forEach((p) => {
+      const li = document.createElement('li');
+      li.className = 'drill';
+      li.innerHTML = `
+        <p class="drill-text">${escapeHtml(p)}</p>
+        <div class="btn-row">
+          <button type="button" class="btn" data-act="play">Hear it</button>
+          <button type="button" class="btn" data-act="slow">Slow</button>
+        </div>
+      `;
+      li.querySelector('[data-act="play"]').addEventListener('click', () => speak(p, 0.95));
+      li.querySelector('[data-act="slow"]').addEventListener('click', () => speak(p, 0.75));
+      list.appendChild(li);
     });
   }
 
